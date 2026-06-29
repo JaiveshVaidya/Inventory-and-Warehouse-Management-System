@@ -11,7 +11,7 @@ import {
   Legend,
   ArcElement
 } from 'chart.js';
-import { ArrowUpRight, TrendingUp, AlertOctagon, BarChart4 } from 'lucide-react';
+import { ArrowUpRight, TrendingUp, BarChart4 } from 'lucide-react';
 
 ChartJS.register(
   CategoryScale,
@@ -33,7 +33,7 @@ const Reports = () => {
         const res = await axios.get('/api/reports/dashboard');
         setStats(res.data);
       } catch (err) {
-        console.error(err);
+        console.error("Could not fetch reports dashboard stats:", err);
       } finally {
         setLoading(false);
       }
@@ -45,6 +45,11 @@ const Reports = () => {
     return (
       <div className="space-y-6 animate-pulse">
         <div className="h-10 bg-slate-900 rounded-xl w-48"></div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="h-24 bg-slate-900 rounded-3xl"></div>
+          ))}
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="h-80 bg-slate-900 rounded-3xl"></div>
           <div className="h-80 bg-slate-900 rounded-3xl"></div>
@@ -53,13 +58,16 @@ const Reports = () => {
     );
   }
 
-  // Sample or formatted data for charts
+  // Parse DB-sourced category stock values
+  const categoryLabels = stats?.categoryStockValue ? Object.keys(stats.categoryStockValue) : [];
+  const categoryData = stats?.categoryStockValue ? Object.values(stats.categoryStockValue) : [];
+
   const barData = {
-    labels: ['Electronics', 'Accessories', 'Offices', 'Furniture'],
+    labels: categoryLabels.length > 0 ? categoryLabels : ['Electronics', 'Accessories', 'Offices'],
     datasets: [
       {
         label: 'Stock Value ($)',
-        data: [150000, 45000, 12000, 28000],
+        data: categoryData.length > 0 ? categoryData : [0, 0, 0],
         backgroundColor: 'rgba(14, 160, 234, 0.65)',
         borderColor: '#0ea0ea',
         borderWidth: 1,
@@ -68,12 +76,16 @@ const Reports = () => {
     ],
   };
 
+  // Parse DB-sourced warehouse distribution
+  const warehouseLabels = stats?.warehouseStockDistribution ? Object.keys(stats.warehouseStockDistribution) : [];
+  const warehouseData = stats?.warehouseStockDistribution ? Object.values(stats.warehouseStockDistribution) : [];
+
   const doughnutData = {
-    labels: ['Central Hub', 'West Coast Annex', 'Euro Distribution'],
+    labels: warehouseLabels.length > 0 ? warehouseLabels : ['No Sites'],
     datasets: [
       {
         label: 'Stock Distribution',
-        data: [450, 180, 320],
+        data: warehouseData.length > 0 ? warehouseData : [0],
         backgroundColor: [
           'rgba(14, 160, 234, 0.7)',
           'rgba(99, 102, 241, 0.7)',
@@ -112,6 +124,9 @@ const Reports = () => {
     }
   };
 
+  // Calculate estimated total catalog worth based on database inventory
+  const totalStockWorth = categoryData.reduce((acc, curr) => acc + parseFloat(curr), 0);
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -122,17 +137,19 @@ const Reports = () => {
 
       {/* Overview Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="glass-card p-6 rounded-3xl border border-slate-800 flex items-center justify-between">
+        <div className="glass-card p-6 rounded-3xl border border-slate-800 flex items-center justify-between shadow-xl">
           <div>
             <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider block">Estimated Inventory Worth</span>
-            <span className="text-2xl font-bold text-white block mt-2">$235,000.00</span>
+            <span className="text-2xl font-bold text-white block mt-2">
+              ${totalStockWorth.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </span>
           </div>
           <div className="p-3 bg-brand-500/10 rounded-2xl text-brand-400">
             <TrendingUp className="w-6 h-6" />
           </div>
         </div>
 
-        <div className="glass-card p-6 rounded-3xl border border-slate-800 flex items-center justify-between">
+        <div className="glass-card p-6 rounded-3xl border border-slate-800 flex items-center justify-between shadow-xl">
           <div>
             <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider block">Fulfillment Precision</span>
             <span className="text-2xl font-bold text-white block mt-2">98.4%</span>
@@ -142,7 +159,7 @@ const Reports = () => {
           </div>
         </div>
 
-        <div className="glass-card p-6 rounded-3xl border border-slate-800 flex items-center justify-between">
+        <div className="glass-card p-6 rounded-3xl border border-slate-800 flex items-center justify-between shadow-xl">
           <div>
             <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider block">Turnover Cycles</span>
             <span className="text-2xl font-bold text-white block mt-2">12.5 days</span>

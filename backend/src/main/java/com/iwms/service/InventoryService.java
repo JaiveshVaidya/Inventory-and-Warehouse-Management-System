@@ -26,15 +26,17 @@ public class InventoryService {
     private final WarehouseRepository warehouseRepository;
     private final RabbitTemplate rabbitTemplate;
     private final AuditLogService auditLogService;
+    private final NotificationService notificationService;
 
     public InventoryService(InventoryRepository inventoryRepository, ProductRepository productRepository,
                             WarehouseRepository warehouseRepository, RabbitTemplate rabbitTemplate,
-                            AuditLogService auditLogService) {
+                            AuditLogService auditLogService, NotificationService notificationService) {
         this.inventoryRepository = inventoryRepository;
         this.productRepository = productRepository;
         this.warehouseRepository = warehouseRepository;
         this.rabbitTemplate = rabbitTemplate;
         this.auditLogService = auditLogService;
+        this.notificationService = notificationService;
     }
 
     public List<Inventory> getAllInventory() {
@@ -112,6 +114,13 @@ public class InventoryService {
             
             logger.warn(warningMessage);
             
+            // Real-time broadcast
+            try {
+                notificationService.broadcast("LOW_STOCK", warningMessage);
+            } catch (Exception e) {
+                logger.warn("SSE broadcast failed: {}", e.getMessage());
+            }
+
             try {
                 rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE_NAME, RabbitMQConfig.ROUTING_KEY, warningMessage);
                 logger.info("Sent low-stock AMQP warning message to RabbitMQ.");

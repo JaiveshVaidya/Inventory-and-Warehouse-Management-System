@@ -57,6 +57,25 @@ public class ReportService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         stats.put("totalRevenue", totalRevenue);
 
+        // Group stock value per category
+        Map<String, BigDecimal> categoryValueMap = new HashMap<>();
+        // Group stock quantity per warehouse
+        Map<String, Long> warehouseStockMap = new HashMap<>();
+
+        for (Inventory inv : allInventory) {
+            String category = inv.getProduct().getCategory();
+            BigDecimal unitPrice = inv.getProduct().getPrice();
+            BigDecimal totalValue = unitPrice.multiply(BigDecimal.valueOf(inv.getQuantity()));
+
+            categoryValueMap.put(category, categoryValueMap.getOrDefault(category, BigDecimal.ZERO).add(totalValue));
+
+            String warehouseName = inv.getWarehouse().getName();
+            warehouseStockMap.put(warehouseName, warehouseStockMap.getOrDefault(warehouseName, 0L) + inv.getQuantity());
+        }
+
+        stats.put("categoryStockValue", categoryValueMap);
+        stats.put("warehouseStockDistribution", warehouseStockMap);
+
         // Recent audit activities (limit to 10 logs)
         stats.put("recentActivities", auditLogRepository.findAllByOrderByTimestampDesc().stream().limit(10).toList());
 
