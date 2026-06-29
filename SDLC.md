@@ -59,15 +59,15 @@ During this phase, functional requirements for each user persona were compiled:
 ### Phase 2: System Design
 The design phase translates functional requirements into technical specifications:
 - **System Architecture:** A decoupled structure consisting of a React single page application communicating via RESTful endpoints to a Spring Boot service.
-- **Data Architecture:** A normalized relational schema modeled in MySQL to ensure absolute ACID compliance for orders, transfers, and ledger accounting.
-- **Caching Layer:** Redis cache stores active user sessions, token blacklists, and high-read static data (e.g., product catalogs, warehouses list) to lower database load.
-- **Event-Driven Messaging:** Integration of RabbitMQ (or Kafka) for processing delayed notifications, low-stock warnings, and transactional email triggers asynchronously.
+- **Data Architecture:** Dual-mode data management. In production, MySQL ensures absolute ACID compliance for order ledgering and auditing. In local offline modes, H2 acts as an in-memory SQL catalog fallback.
+- **Caching Layer:** Double-tiered caching. Redis cache mitigates database hits for products and warehouses in production. In local modes, standard Simple ConcurrentMap caching handles key-value lookups.
+- **Real-Time Notification Hub:** Dynamic Server-Sent Events (SSE) broadcast channel (`/api/notifications/stream`) streaming real-time alerts to frontend dashboards, complemented by RabbitMQ AMQP messaging for decoupled notification queues.
 
 ### Phase 3: Implementation & Coding
 Development is governed by the following coding guidelines:
-- **Backend (Spring Boot):** Clean architecture leveraging Controllers, DTO wrappers, Services, JPA Repositories, and Entity layers. Global exceptions are managed using a `@ControllerAdvice` decorator.
-- **Security (Spring Security + JWT):** Stateless token-based security. Filter chain captures request headers, validates JWT validity, loads security context, and handles CORS protocols.
-- **Frontend (React + Tailwind):** Modular component organization, Context API for state containment, Axios interceptors to automatically append Auth headers, and Tailwind CSS configuration for modern enterprise aesthetics.
+- **Backend (Spring Boot):** Clean architecture leveraging Controllers, DTO wrappers, Services, JPA Repositories, and Entity layers. Exposes streaming endpoints (SSE) for low stock warnings and streams RFC 4180 CSV exports for administrative audits. Global exceptions are managed using a `@ControllerAdvice` decorator.
+- **Security (Spring Security + JWT):** Stateless token-based security. Filter chain captures request headers, validates JWT validity, loads security context, and handles CORS protocols. Permitted SSE endpoints to allow browser EventSource subscriptions.
+- **Frontend (React + Tailwind):** Modular component organization, Context API for state containment, Axios interceptors to automatically append Auth headers, and Tailwind CSS configuration for modern enterprise aesthetics. Integrated reactive EventSource listeners, dynamic Chart.js dashboards, and binary blob file download interfaces.
 
 ### Phase 4: Testing & Quality Assurance
 Quality gates are enforced to guarantee release durability:

@@ -29,12 +29,12 @@ public class InventoryService {
     private final NotificationService notificationService;
 
     public InventoryService(InventoryRepository inventoryRepository, ProductRepository productRepository,
-                            WarehouseRepository warehouseRepository, RabbitTemplate rabbitTemplate,
+                            WarehouseRepository warehouseRepository, Optional<RabbitTemplate> rabbitTemplateProvider,
                             AuditLogService auditLogService, NotificationService notificationService) {
         this.inventoryRepository = inventoryRepository;
         this.productRepository = productRepository;
         this.warehouseRepository = warehouseRepository;
-        this.rabbitTemplate = rabbitTemplate;
+        this.rabbitTemplate = rabbitTemplateProvider.orElse(null);
         this.auditLogService = auditLogService;
         this.notificationService = notificationService;
     }
@@ -121,11 +121,13 @@ public class InventoryService {
                 logger.warn("SSE broadcast failed: {}", e.getMessage());
             }
 
-            try {
-                rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE_NAME, RabbitMQConfig.ROUTING_KEY, warningMessage);
-                logger.info("Sent low-stock AMQP warning message to RabbitMQ.");
-            } catch (Exception e) {
-                logger.warn("Could not dispatch low-stock notification over AMQP (RabbitMQ offline): {}", e.getMessage());
+            if (rabbitTemplate != null) {
+                try {
+                    rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE_NAME, RabbitMQConfig.ROUTING_KEY, warningMessage);
+                    logger.info("Sent low-stock AMQP warning message to RabbitMQ.");
+                } catch (Exception e) {
+                    logger.warn("Could not dispatch low-stock notification over AMQP (RabbitMQ offline): {}", e.getMessage());
+                }
             }
         }
     }
